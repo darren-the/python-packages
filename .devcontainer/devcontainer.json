@@ -1,9 +1,8 @@
 {
-    "name": "crypto-trading-monorepo",
+    "name": "python-packages-monorepo",
     "build": {
         "dockerfile": "Dockerfile"
     },
-    // "postCreateCommand": "bash .devcontainer/setup.sh",
     "customizations": {
         "vscode": {
             "extensions": [
