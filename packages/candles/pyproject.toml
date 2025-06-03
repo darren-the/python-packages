@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "candles"
+version = "0.1.5"  # Bump version for the fix
+description = "Cryptocurrency market data processing"
+authors = [{name = "darren", email = "darren.the7@gmail.com"}]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "requests>=2.32.3",
+    "typing_extensions==4.14.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/darren-the/crypto-trading-v3"
+Repository = "https://github.com/darren-the/crypto-trading-v3"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["candles*"]

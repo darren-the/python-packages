@@ -1,0 +1,152 @@
+name: Build and Release Packages
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.changes.outputs.packages }}
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Detect changed packages
+      id: changes
+      run: |
+        PACKAGES=$(find packages -name "pyproject.toml" -exec dirname {} \; | sort)
+        CHANGED_PACKAGES=""
+        
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          CHANGED_PACKAGES=$(echo "$PACKAGES" | tr '\n' ' ')
+        else
+          for package in $PACKAGES; do
+            package_name=$(basename "$package")
+            if git diff HEAD~1 --name-only | grep -q "^$package/"; then
+              echo "📦 Changes detected in $package_name"
+              CHANGED_PACKAGES="$CHANGED_PACKAGES $package"
+            fi
+          done
+        fi
+        
+        CHANGED_PACKAGES=$(echo "$CHANGED_PACKAGES" | xargs)
+        echo "Changed packages: $CHANGED_PACKAGES"
+        echo "packages=$CHANGED_PACKAGES" >> $GITHUB_OUTPUT
+        
+    - name: Set matrix for parallel jobs
+      id: set-matrix
+      run: |
+        if [ -n "${{ steps.changes.outputs.packages }}" ]; then
+          PACKAGES_ARRAY=$(echo "${{ steps.changes.outputs.packages }}" | tr ' ' '\n' | jq -R . | jq -s .)
+          echo "matrix={\"package\":$(echo $PACKAGES_ARRAY)}" >> $GITHUB_OUTPUT
+        else
+          echo "matrix={\"package\":[]}" >> $GITHUB_OUTPUT
+        fi
+
+  build-and-release:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.packages != ''
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+      fail-fast: false
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build
+        
+    - name: Get package info
+      id: package_info
+      run: |
+        PACKAGE_PATH="${{ matrix.package }}"
+        PACKAGE_NAME=$(basename "$PACKAGE_PATH")
+        
+        VERSION=$(python -c "import tomllib; f=open('$PACKAGE_PATH/pyproject.toml','rb'); data=tomllib.load(f); print(data['project']['version']); f.close()")
+        
+        PROJECT_NAME=$(python -c "import tomllib; f=open('$PACKAGE_PATH/pyproject.toml','rb'); data=tomllib.load(f); print(data['project']['name']); f.close()")
+        
+        echo "package_path=$PACKAGE_PATH" >> $GITHUB_OUTPUT
+        echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
+        echo "project_name=$PROJECT_NAME" >> $GITHUB_OUTPUT
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "tag=${PACKAGE_NAME}-v${VERSION}" >> $GITHUB_OUTPUT
+        
+    - name: Check if release already exists
+      run: |
+        if gh release view ${{ steps.package_info.outputs.tag }} >/dev/null 2>&1; then
+          echo "❌ Release ${{ steps.package_info.outputs.tag }} already exists!"
+          echo "Please bump the version in ${{ steps.package_info.outputs.package_path }}/pyproject.toml before pushing."
+          exit 1
+        else
+          echo "✅ Version ${{ steps.package_info.outputs.version }} is new for ${{ steps.package_info.outputs.package_name }}, proceeding with release"
+        fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Build package
+      run: |
+        cd ${{ steps.package_info.outputs.package_path }}
+        python -m build
+        cd ../..
+        
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.package_info.outputs.tag }}
+        name: ${{ steps.package_info.outputs.package_name }} v${{ steps.package_info.outputs.version }}
+        body: |
+          ## 📦 ${{ steps.package_info.outputs.project_name }} v${{ steps.package_info.outputs.version }}
+          
+          ### Installation
+          
+          ```bash
+          pip install https://github.com/${{ github.repository }}/releases/download/${{ steps.package_info.outputs.tag }}/${{ steps.package_info.outputs.project_name }}-${{ steps.package_info.outputs.version }}-py3-none-any.whl
+          ```
+          
+          ### Changes
+          
+          This release contains changes from commit ${{ github.sha }}.
+          
+          ### Package Details
+          - **Package**: `${{ steps.package_info.outputs.project_name }}`
+          - **Version**: `${{ steps.package_info.outputs.version }}`
+          - **Path**: `${{ steps.package_info.outputs.package_path }}`
+        files: |
+          ${{ steps.package_info.outputs.package_path }}/dist/*.whl
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  summary:
+    needs: [detect-changes, build-and-release]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+    - name: Summary
+      run: |
+        if [ "${{ needs.detect-changes.outputs.packages }}" = "" ]; then
+          echo "🔍 No package changes detected - no deployments triggered"
+        else
+          echo "🚀 Deployed packages: ${{ needs.detect-changes.outputs.packages }}"
+        fi
