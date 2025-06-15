@@ -29,11 +29,13 @@ def merge_candles(
 
     if time_passed_interval_start(candle.timestamp, timeframe.ms) == 0:
         merged = candle.copy(
+            base_timeframe=candle.base_timeframe,
             timeframe=timeframe,
             complete=True if candle.timeframe == timeframe else False
         )
     else:
         merged = prev_candle.copy(
+            base_timeframe=candle.base_timeframe,
             timeframe=timeframe,
             timestamp=candle.timestamp,
             close=candle.close,
@@ -75,6 +77,7 @@ def calculate_rsi(
  
     if candle.complete:
         rsi = prev_rsi.copy(
+            base_timeframe=candle.base_timeframe,
             timestamp=candle.timestamp,
             value=round(rsi_value, 2),
             price=candle.close,
@@ -85,6 +88,7 @@ def calculate_rsi(
         )
     else:
         rsi = prev_rsi.copy(
+            base_timeframe=candle.base_timeframe,
             timestamp=candle.timestamp,
             value=round(rsi_value, 2),
             avg_gain=avg_gain,
