@@ -1,5 +1,5 @@
 from candles.types import Candle, Timeframe, RSI
-from candles.utils import round_down_to_nearest_interval, time_passed_interval_start
+from candles.utils import round_down_to_nearest_interval, time_passed_interval_start, morph_prev_timeseries_obj
 
 
 def merge_candles(
@@ -24,8 +24,9 @@ def merge_candles(
     if prev_candle is None:
         prev_candle = candle.copy(
             timeframe=timeframe,
-            timestamp=round_down_to_nearest_interval(candle.timestamp, timeframe.ms)
+            timestamp=candle.timestamp - candle.timeframe.ms
         )
+    prev_candle = morph_prev_timeseries_obj(candle, prev_candle)
 
     if time_passed_interval_start(candle.timestamp, timeframe.ms) == 0:
         merged = candle.copy(
@@ -47,8 +48,7 @@ def merge_candles(
                 == timeframe.ms
             ) else False
         )
-    prev_candle = merged
-    return merged, prev_candle
+    return merged
 
 
 def calculate_rsi(
@@ -59,8 +59,9 @@ def calculate_rsi(
         prev_rsi = RSI(
             base_timeframe=candle.base_timeframe,
             timeframe=candle.timeframe,
-            timestamp=0
+            timestamp=candle.timestamp - candle.timeframe.ms
         )
+    prev_rsi = morph_prev_timeseries_obj(candle, prev_rsi)
 
     # defaults
     rsi_value = prev_rsi.value

@@ -55,6 +55,7 @@ class TimeseriesObject:
     base_timeframe: Timeframe
     timeframe: Timeframe
     timestamp: int
+    complete: bool = True
 
     def __repr__(self):
         return json.dumps(self.__dict__)
@@ -83,11 +84,10 @@ class TimeseriesObject:
 
 @dataclass(frozen=True)
 class Candle(TimeseriesObject):
-    open: float
-    close: float
-    high: float
-    low: float
-    complete: bool = True
+    open: float = 0
+    close: float = 0
+    high: float = 0
+    low: float = 0
 
 
 @dataclass(frozen=True)
@@ -98,4 +98,3 @@ class RSI(TimeseriesObject):
     avg_loss: float = 0
     length: int = 0
     max_length: int = 14
-    complete: bool = True
