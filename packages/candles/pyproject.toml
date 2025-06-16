@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "candles"
-version = "0.1.7"
+version = "0.1.8"
 description = "OCHL candle data processing library"
 authors = [{name = "darren", email = "darren.the7@gmail.com"}]
 readme = "README.md"
