@@ -14,5 +14,11 @@ dependencies = []
 [project.urls]
 Repository = "https://github.com/darren-the/python-packages"
 
+[project.optional-dependencies]
+test = ["pytest"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
 [tool.setuptools]
 packages = ["taskgraph"]
