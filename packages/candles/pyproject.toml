@@ -18,7 +18,10 @@ dependencies = [
 Repository = "https://github.com/darren-the/python-packages"
 
 [project.optional-dependencies]
-dev = ["pytest"]
+test = ["pytest"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [tool.setuptools.packages.find]
 where = ["."]
