@@ -153,11 +153,18 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  summary:
+  build-summary:
     needs: [detect-changes, build-and-release]
     if: always()
     runs-on: ubuntu-latest
     steps:
+    - name: Fail if previous jobs failed
+      run: |
+        if [ "${{ needs.detect-changes.result }}" != "success" ] || [ "${{ needs.build-and-release.result }}" != "success" ]; then
+          echo "❌ One or more required jobs failed."
+          exit 1
+        fi
+
     - name: Summary
       run: |
         if [ "${{ needs.detect-changes.outputs.packages }}" = "" ]; then
