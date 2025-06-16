@@ -44,9 +44,9 @@ def test_compatible_two_candles():
     )
     prev_candle = Candle(
         base_timeframe=Timeframe._5m,
-        timeframe=Timeframe._5m,
+        timeframe=Timeframe._15m,
         timestamp=1451606400000,
-        complete=True,
+        complete=False,
         open=100,
         close=200,
         high=250,
