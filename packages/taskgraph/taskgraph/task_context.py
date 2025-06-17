@@ -1,5 +1,5 @@
 import contextvars
-
+from taskgraph.exceptions import TaskContextError
 
 _current_task_context: contextvars.ContextVar[dict | None] = contextvars.ContextVar("_current_task_context", default=None)
 
@@ -7,7 +7,7 @@ _current_task_context: contextvars.ContextVar[dict | None] = contextvars.Context
 def get_current_task_context() -> dict:
     ctx = _current_task_context.get()
     if ctx is None:
-        raise RuntimeError("No active task context")
+        raise TaskContextError("No active task context")
     return ctx
 
 
