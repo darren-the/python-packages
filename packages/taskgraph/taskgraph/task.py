@@ -10,11 +10,10 @@ class TaskState:
 
 
 class TaskNode:
-    def __init__(self, name: str, fn: Callable, args, kwargs, task_id: str = None):
+    def __init__(self, name: str, fn: Callable, kwargs, task_id: str = None):
         self.name = name
         self.task_id = task_id or name
         self.fn = fn
-        self.args = args
         self.kwargs = kwargs
 
         self.state = TaskState()
@@ -27,7 +26,6 @@ class TaskNode:
         node.downstream.add(self)
 
     def execute(self) -> Generator:
-        resolved_args = [arg.execute() if isinstance(arg, TaskNode) else arg for arg in self.args]
         resolved_kwargs = {k: (v.execute() if isinstance(v, TaskNode) else v) for k, v in self.kwargs.items()}
 
         current_graph = GraphContext.current()
@@ -41,7 +39,7 @@ class TaskNode:
                 for item in result:
                     yield item
 
-        result = self.fn(*resolved_args, **resolved_kwargs)
+        result = self.fn(**resolved_kwargs)
 
         if inspect.isgenerator(result) or isinstance(result, Iterable):
             return wrap_generator_with_context(result)

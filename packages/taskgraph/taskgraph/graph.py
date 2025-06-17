@@ -1,8 +1,9 @@
 import json
-import pickle
+import logging
 from typing import List, Callable
 from taskgraph.context import GraphContext
 from taskgraph.task import TaskNode
+from taskgraph.exceptions import TaskContextError
 
 
 class Graph:
@@ -88,15 +89,10 @@ class Graph:
         for hook in self._on_execute_end_hooks:
             try:
                 hook(self)
+            except TaskContextError as e:
+                raise TaskContextError(
+                    f"Task context was accessed inside the hook '{hook.__name__}'. "
+                    "However, the graph instance parameter can be used to access context directly."
+                )
             except Exception as e:
-                print(f"Warning: Hook {hook.__name__} failed with error: {e}")
-    
-    # def save_state(self, path: str):
-    #     with open(path, "wb") as f:
-    #         pickle.dump(self.state, f)
-
-    # def load_state(self, path: str):
-    #     with open(path, "rb") as f:
-    #         state_data = pickle.load(f)
-    #         self.graph_state = state_data.get("graph_state", {})
-    #         self.global_state = state_data.get("global_state", {})
+                raise

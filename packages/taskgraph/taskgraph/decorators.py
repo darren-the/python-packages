@@ -3,6 +3,7 @@ from typing import Callable, TypeVar, ParamSpec, Union, List, overload
 from taskgraph.context import GraphContext
 from taskgraph.task import TaskNode
 from taskgraph.graph import Graph
+from taskgraph.exceptions import DuplicateTaskIdError, NoTaskIdError
 
 P = ParamSpec('P')
 R = TypeVar('R')
@@ -40,7 +41,7 @@ def graph(
     """
     def decorator(func: Callable) -> Callable[..., Graph]:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> Graph:
+        def wrapper(**kwargs) -> Graph:
             g = Graph(
                 name=func.__name__, 
                 graph_state=graph_state or {}, 
@@ -58,7 +59,7 @@ def graph(
             
             GraphContext.push(g)
             try:
-                func(*args, **kwargs)
+                func(**kwargs)
             finally:
                 GraphContext.pop()
             return g
@@ -72,22 +73,19 @@ def graph(
 
 def task(fn: Callable[P, R]) -> Callable[P, TaskNode]:
     @functools.wraps(fn)
-    def wrapper(*args: P.args, **kwargs: P.kwargs):
+    def wrapper(**kwargs: P.kwargs):
         current_graph = GraphContext.current()
 
         task_id = kwargs.pop("task_id", None)
         if task_id is None:
-            raise ValueError(f"Task '{fn.__name__}' requires a 'task_id' argument.")
+            raise NoTaskIdError(f"Task '{fn.__name__}' requires a 'task_id' argument.")
         if task_id in [node.task_id for node in current_graph.nodes]:
-            raise ValueError(f"Duplicate task_id '{task_id}' detected in graph '{current_graph.name}'")
+            raise DuplicateTaskIdError(f"Duplicate task_id '{task_id}' detected in graph '{current_graph.name}'")
         name = fn.__name__
-        node = TaskNode(name=name, fn=fn, args=args, kwargs=kwargs, task_id=task_id)
+        node = TaskNode(name=name, fn=fn, kwargs=kwargs, task_id=task_id)
 
         current_graph.add_node(node)
 
-        for arg in args:
-            if isinstance(arg, TaskNode):
-                node.set_upstream(arg)
         for val in kwargs.values():
             if isinstance(val, TaskNode):
                 node.set_upstream(val)
