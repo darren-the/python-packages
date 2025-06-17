@@ -1,5 +1,6 @@
 import pytest
 from taskgraph.decorators import task, graph
+from taskgraph.custom_tasks import expand_task
 from taskgraph.task_context import (
     get_current_task_context,
     set_global_state,
@@ -29,6 +30,33 @@ def test_basic_graph():
     assert test_output == [0, 2, 4]
     assert list(graph_instance.nodes[0].downstream)[0] == graph_instance.nodes[1]
     assert list(graph_instance.nodes[1].upstream)[0] == graph_instance.nodes[0]
+
+
+def test_expand_graph():
+    test_output_b = []
+    test_output_c = []
+    @task
+    def task_a():
+        for a in range(3):
+            yield a
+    @task
+    def task_b(iterable_a):
+        for a in iterable_a:
+            test_output_b.append(a * 2)
+    @task
+    def task_c(iterable_a):
+        for a in iterable_a:
+            test_output_c.append(a * 2)
+    @graph
+    def basic_graph():
+        a = task_a(task_id='task_a')
+        a_expanded = expand_task(a, 2)
+        b = task_b(task_id='task_b', iterable_a=a_expanded[0])
+        c = task_c(task_id='task_c', iterable_a=a_expanded[1])
+    graph_instance = basic_graph()
+    graph_instance.execute()
+    assert test_output_b == [0, 2, 4]
+    assert test_output_c == [0, 2, 4]
 
 
 def test_task_context():
@@ -80,6 +108,14 @@ def test_global_state():
     graph_instance = basic_graph()
     graph_instance.execute()
     assert test_output == [0, 1, 2]
+
+
+def test_initial_global_state():
+    @graph
+    def basic_graph(x, y):
+        pass
+    graph_instance = basic_graph(x="hello", y="world")
+    assert graph_instance.global_state == {"x": "hello", "y": "world"}
 
 
 def test_execute_end_hook():

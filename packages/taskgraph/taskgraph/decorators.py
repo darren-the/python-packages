@@ -59,6 +59,7 @@ def graph(
             
             GraphContext.push(g)
             try:
+                g.global_state.update(kwargs)
                 func(**kwargs)
             finally:
                 GraphContext.pop()
