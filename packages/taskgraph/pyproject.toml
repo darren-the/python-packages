@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "taskgraph"
-version = "0.1.5"
+version = "0.1.6"
 description = "Task orchestration framework"
 authors = [{name = "darren", email = "darren.the7@gmail.com"}]
 readme = "README.md"
