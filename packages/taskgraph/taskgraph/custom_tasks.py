@@ -14,6 +14,6 @@ def expand_task(task_node: TaskNode, n: int) -> List[TaskNode]:
         def expand(source):
             iters = itertools.tee(source, n)
             yield from iters[index]
-        return expand(source=task_node, task_id=f"expand_{index}")
+        return expand(source=task_node, task_id=f"expand_{task_node.task_id}_{index}")
 
     return [make_expansion(i) for i in range(n)]

@@ -57,6 +57,8 @@ def test_expand_graph():
     graph_instance.execute()
     assert test_output_b == [0, 2, 4]
     assert test_output_c == [0, 2, 4]
+    assert "expand_task_a_0" in [node.task_id for node in graph_instance.nodes]
+    assert "expand_task_a_1" in [node.task_id for node in graph_instance.nodes]
 
 
 def test_task_context():
