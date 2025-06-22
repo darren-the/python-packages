@@ -28,6 +28,12 @@ class Graph:
         self.graph_state = value.get("graph_state", {})
         self.global_state = value.get("global_state", {})
 
+    def update_state(self, value: dict):
+        if not isinstance(value, dict):
+            raise ValueError("State must be a dictionary")
+        self.graph_state.update(value.get("graph_state", {}))
+        self.global_state.update(value.get("global_state", {}))
+
     def add_node(self, node: TaskNode):
         self.nodes.append(node)
 
