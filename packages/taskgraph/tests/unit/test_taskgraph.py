@@ -120,6 +120,29 @@ def test_initial_global_state():
     assert graph_instance.global_state == {"x": "hello", "y": "world"}
 
 
+def test_update_state():
+    @task
+    def task_a():
+        ctx = get_current_task_context()
+        for a in range(3):
+            ctx["task_state"]["a_value"] = a
+            yield a
+    @graph
+    def basic_graph():
+        a = task_a(task_id='task_a')
+    graph_instance = basic_graph()
+    graph_instance.execute()
+    new_state = {"graph_state": {'task_b': {'b_value': 3}}, "global_state": {'test_state': 0}}
+    graph_instance.update_state(new_state)
+    assert graph_instance.state == {
+        "graph_state": {
+            'task_a': {'a_value': 2},
+            'task_b': {'b_value': 3}
+        },
+        "global_state": {'test_state': 0}
+    }
+
+
 def test_execute_end_hook():
     test_output = []
     @task
