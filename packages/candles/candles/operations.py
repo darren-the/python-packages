@@ -92,8 +92,6 @@ def calculate_rsi(
             base_timeframe=candle.base_timeframe,
             timestamp=candle.timestamp,
             value=round(rsi_value, 2),
-            avg_gain=avg_gain,
-            avg_loss=avg_loss,
             complete=candle.complete
         )
 
