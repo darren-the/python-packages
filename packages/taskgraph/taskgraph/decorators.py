@@ -1,7 +1,7 @@
 import functools
 from typing import Callable, TypeVar, ParamSpec, Union, List, overload
 from taskgraph.context import GraphContext
-from taskgraph.task import TaskNode
+from taskgraph.task import TaskNode, SourceNode
 from taskgraph.graph import Graph
 from taskgraph.exceptions import DuplicateTaskIdError, NoTaskIdError
 
@@ -72,7 +72,33 @@ def graph(
         return decorator(fn)  # called as @graph
 
 
+def source(fn: Callable[P, R]) -> Callable[P, SourceNode]:
+    """
+    Decorator for source functions that generate data streams.
+    Source functions must be generators that yield individual items.
+    """
+    @functools.wraps(fn)
+    def wrapper(**kwargs: P.kwargs):
+        current_graph = GraphContext.current()
+
+        task_id = kwargs.pop("task_id", None)
+        if task_id is None:
+            raise NoTaskIdError(f"Source '{fn.__name__}' requires a 'task_id' argument.")
+        if task_id in [node.task_id for node in current_graph.nodes]:
+            raise DuplicateTaskIdError(f"Duplicate task_id '{task_id}' detected in graph '{current_graph.name}'")
+        
+        name = fn.__name__
+        node = SourceNode(name=name, fn=fn, kwargs=kwargs, task_id=task_id)
+        current_graph.add_node(node)
+        return node
+    return wrapper
+
+
 def task(fn: Callable[P, R]) -> Callable[P, TaskNode]:
+    """
+    Decorator for task functions that process individual items.
+    Task functions receive single values and return single values.
+    """
     @functools.wraps(fn)
     def wrapper(**kwargs: P.kwargs):
         current_graph = GraphContext.current()
@@ -82,13 +108,14 @@ def task(fn: Callable[P, R]) -> Callable[P, TaskNode]:
             raise NoTaskIdError(f"Task '{fn.__name__}' requires a 'task_id' argument.")
         if task_id in [node.task_id for node in current_graph.nodes]:
             raise DuplicateTaskIdError(f"Duplicate task_id '{task_id}' detected in graph '{current_graph.name}'")
+        
         name = fn.__name__
         node = TaskNode(name=name, fn=fn, kwargs=kwargs, task_id=task_id)
-
         current_graph.add_node(node)
 
+        # Build dependency relationships
         for val in kwargs.values():
-            if isinstance(val, TaskNode):
+            if isinstance(val, (TaskNode, SourceNode)):
                 node.set_upstream(val)
 
         return node
