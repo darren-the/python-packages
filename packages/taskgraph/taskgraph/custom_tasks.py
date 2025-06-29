@@ -1,19 +1,19 @@
 import itertools
 from typing import List
-from taskgraph.task import TaskNode
+from taskgraph.task import TaskNode, SourceNode
 from taskgraph.decorators import task
 
-
+# Note: expand_task is less relevant in the new model since sources 
+# naturally distribute to multiple downstream tasks
 def expand_task(task_node: TaskNode, n: int) -> List[TaskNode]:
     """
-    Splits a generator output from one task into multiple via `tee`,
-    each wrapped in a new task node.
+    DEPRECATED: This function is less relevant in the new source/task model.
+    In the new model, sources naturally distribute to multiple downstream tasks.
+    
+    If you need to split processing, create multiple task nodes that depend 
+    on the same upstream node instead.
     """
-    def make_expansion(index):
-        @task
-        def expand(source):
-            iters = itertools.tee(source, n)
-            yield from iters[index]
-        return expand(source=task_node, task_id=f"expand_{task_node.task_id}_{index}")
-
-    return [make_expansion(i) for i in range(n)]
+    raise DeprecationWarning(
+        "expand_task is deprecated in the new source/task model. "
+        "Create multiple task nodes that depend on the same upstream node instead."
+    )

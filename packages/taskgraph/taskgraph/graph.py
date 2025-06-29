@@ -1,8 +1,9 @@
 import json
 import logging
-from typing import List, Callable
+from typing import List, Callable, Dict, Set
+from collections import deque
 from taskgraph.context import GraphContext
-from taskgraph.task import TaskNode
+from taskgraph.task import TaskNode, SourceNode
 from taskgraph.exceptions import TaskContextError
 
 
@@ -56,7 +57,8 @@ class Graph:
     def to_graphviz(self) -> str:
         lines = [f"digraph {self.name} {{"]
         for node in self.nodes:
-            lines.append(f'  "{node.task_id}";')
+            node_type = "source" if isinstance(node, SourceNode) else "task"
+            lines.append(f'  "{node.task_id}" [label="{node.task_id}\\n({node_type})"];')
             for upstream in node.upstream:
                 lines.append(f'  "{upstream.task_id}" -> "{node.task_id}";')
         lines.append("}")
@@ -71,21 +73,125 @@ class Graph:
                     "from": upstream_node.task_id,
                     "to": node.task_id
                 })
+        
+        nodes_data = []
+        for node in sorted_nodes:
+            nodes_data.append({
+                "id": node.task_id,
+                "type": "source" if isinstance(node, SourceNode) else "task"
+            })
+            
         graph_data = {
             "graph": self.name,
-            "nodes": [node.task_id for node in sorted_nodes],
+            "nodes": nodes_data,
             "edges": edges
         }
         return json.dumps(graph_data, indent=2 if pretty else None)
 
+    def _get_source_nodes(self) -> List[SourceNode]:
+        """Get all source nodes in the graph"""
+        return [node for node in self.nodes if isinstance(node, SourceNode)]
+
+    def _topological_sort_from_source(self, source_node: SourceNode) -> List[TaskNode]:
+        """
+        Get topological ordering of nodes reachable from the given source node
+        """
+        visited = set()
+        result = []
+        
+        def dfs(node):
+            if node in visited:
+                return
+            visited.add(node)
+            
+            # Visit all downstream nodes first
+            for downstream in node.downstream:
+                dfs(downstream)
+            
+            result.append(node)
+        
+        dfs(source_node)
+        return list(reversed(result))
+
+    def _propagate_from_source(self, source_node: SourceNode):
+        """
+        Execute the subgraph starting from a source node, propagating each generated value
+        """
+        # Get execution order for this source's subgraph
+        execution_order = self._topological_sort_from_source(source_node)
+        
+        # Generate values from source and propagate each one
+        for value in source_node.generate():
+            self._propagate_value(source_node, value, execution_order)
+
+    def _propagate_value(self, source_node: SourceNode, value, execution_order: List[TaskNode]):
+        """
+        Propagate a single value through the execution order
+        """
+        # Track outputs from each node for this value
+        node_outputs = {source_node.task_id: value}
+        
+        # Execute each node in topological order
+        for node in execution_order:
+            if node == source_node:
+                continue  # Source already produced its value
+                
+            # Skip nodes that don't depend on this source
+            if not self._is_reachable_from(node, source_node):
+                continue
+            
+            # Resolve input arguments for this node
+            resolved_kwargs = {}
+            for param_name, param_value in node.kwargs.items():
+                if isinstance(param_value, (TaskNode, SourceNode)):
+                    # This parameter comes from another node's output
+                    if param_value.task_id not in node_outputs:
+                        # This shouldn't happen with proper topological ordering
+                        raise RuntimeError(f"Node {node.task_id} depends on {param_value.task_id} but no output available")
+                    resolved_kwargs[param_name] = node_outputs[param_value.task_id]
+                else:
+                    # This is a literal value
+                    resolved_kwargs[param_name] = param_value
+            
+            # Execute the node
+            try:
+                result = node.execute_single(**resolved_kwargs)
+                node_outputs[node.task_id] = result
+            except Exception as e:
+                raise RuntimeError(f"Error executing node {node.task_id}: {e}") from e
+
+    def _is_reachable_from(self, target_node: TaskNode, source_node: SourceNode) -> bool:
+        """
+        Check if target_node is reachable from source_node by following downstream edges
+        """
+        visited = set()
+        queue = deque([source_node])
+        
+        while queue:
+            current = queue.popleft()
+            if current == target_node:
+                return True
+            if current in visited:
+                continue
+            visited.add(current)
+            queue.extend(current.downstream)
+        
+        return False
+
     def execute(self):
-        """Execute the graph and call end hooks when finished"""
+        """Execute the graph using the new source-driven model"""
         GraphContext.push(self)
         try:
-            # assumes linear run. Add topological sort if needed
-            for node in self.nodes:
-                for _ in node.execute():
-                    pass
+            # Find all source nodes
+            source_nodes = self._get_source_nodes()
+            
+            if not source_nodes:
+                raise ValueError("Graph has no source nodes. Add at least one @source decorated function.")
+            
+            # Execute each source's subgraph
+            for source_node in source_nodes:
+                self._propagate_from_source(source_node)
+                
         finally:
             GraphContext.pop()
             self._call_execute_end_hooks()
