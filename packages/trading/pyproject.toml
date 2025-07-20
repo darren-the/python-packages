@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "trading"
+version = "1.0.0"
+description = "Trading utilities and libraries"
+authors = [{name = "darren", email = "darren.the7@gmail.com"}]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi[standard]>=0.116.1"
+]
+
+[project.urls]
+Repository = "https://github.com/darren-the/python-packages"
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.scripts]
+trading-mock-exchange = "trading.mock_exchange.cli:run"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["trading*"]
