@@ -1,8 +1,8 @@
 from abc import abstractmethod
-from trading.types import OrderType, Symbol, OrderStatus
+from trading.types import OrderType, Symbol, OrderResponse
 
 
-class Client:
+class BaseClient:
     """
     A base class for interacting with an exchange to make authenticated requests.
     This class is intended to be subclassed for specific exchange implementations.
@@ -31,7 +31,7 @@ class Client:
         amount: float,
         price: float,
         **kwargs
-    ) -> OrderStatus:
+    ) -> OrderResponse:
         """
         Internal method to submit an order to the exchange.
         This method should be implemented by subclasses to handle the specifics of the exchange's API.
@@ -52,7 +52,7 @@ class Client:
         amount: float,
         price: float,
         **kwargs
-    ) -> OrderStatus:
+    ) -> OrderResponse:
         """
         Submits an order to the exchange.
 
@@ -64,7 +64,7 @@ class Client:
             **kwargs: Additional parameters for the order.
 
         Returns:
-            OrderStatus: The status of the submitted order.
+            OrderResponse: The status of the submitted order.
         """
         
         self.check_rate_limit()
