@@ -16,6 +16,7 @@ class TimeframeUnit(Enum):
 
 
 class Timeframe(str, Enum):
+    _1m = "1m"
     _5m = "5m"
     _15m = "15m"
     _1h = "1h"
