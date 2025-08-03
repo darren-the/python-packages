@@ -4,6 +4,7 @@ from typing import Generator
 from abc import abstractmethod
 from candles.types import Candle
 from candles.utils import dateobj_to_timestamp, validate_candle
+from candles.exceptions import NothingToImputeError
 
 
 class Client:
@@ -99,10 +100,10 @@ class Client:
             Candle: A new Candle object for each missing interval.
         """
         if candle.timestamp - prev_candle.timestamp <= self._interval:
-            raise ValueError(
+            raise NothingToImputeError(
                 f"Current candle timestamp {candle.timestamp} is not greater than "
                 f"previous candle timestamp {prev_candle.timestamp} by at least "
-                f"the interval {self._interval}."
+                f"the interval {self._interval}. Nothing to impute."
             )
         for t in range(prev_candle.timestamp + self._interval, candle.timestamp, self._interval):
             last_copy = prev_candle.copy(timestamp=t)

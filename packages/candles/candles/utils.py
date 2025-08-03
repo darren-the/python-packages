@@ -54,10 +54,6 @@ def validate_candle(candle: Candle, prev_candle: Candle):
         raise ValueError(
             f"Candle timestamp {candle.timestamp} is not greater than the last candle's timestamp {prev_candle.timestamp}"
         )
-    if candle.timestamp < BASE_INITIAL_TIMESTAMP:
-        raise ValueError(
-            f"Candle timestamp {candle.timestamp} is before the base initial timestamp {BASE_INITIAL_TIMESTAMP}"
-        )
 
 
 def round_down_to_nearest_interval(timestamp: int, interval: int) -> int:

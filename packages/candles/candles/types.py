@@ -2,6 +2,8 @@ import json
 from dataclasses import dataclass
 from enum import Enum
 from typing_extensions import Self
+from candles.exceptions import CandleValidationError, TimeseriesValidationError
+from candles.globals import BASE_INITIAL_TIMESTAMP
 
 
 class TimeframeUnit(Enum):
@@ -57,6 +59,22 @@ class TimeseriesObject:
     timeframe: Timeframe
     timestamp: int
     complete: bool = True
+    
+    def __post_init__(self):
+        if not isinstance(self.timestamp, int):
+            raise TypeError(f"Timestamp must be an integer, got {type(self.timestamp).__name__}")
+        if not isinstance(self.complete, bool):
+            raise TypeError(f"Complete flag must be a boolean, got {type(self.complete).__name__}")
+        if self.timestamp < 0:
+            raise TimeseriesValidationError(f"Timestamp must be non-negative, got {self.timestamp}")
+        if self.timestamp < BASE_INITIAL_TIMESTAMP:
+            raise TimeseriesValidationError(
+                f"Timestamp {self.timestamp} is before the base initial timestamp {BASE_INITIAL_TIMESTAMP}"
+            )
+        if self.timestamp % self.timeframe.ms != 0:
+            raise TimeseriesValidationError(
+                f"Timestamp {self.timestamp} is not aligned with the timeframe {self.timeframe}"
+            )
 
     def __repr__(self):
         return json.dumps(self.__dict__)
@@ -90,6 +108,16 @@ class Candle(TimeseriesObject):
     high: float = 0
     low: float = 0
 
+
+    def __post_init__(self):
+        super().__post_init__()
+        for price in (self.open, self.close, self.high, self.low):
+            if not isinstance(price, (int, float)):
+                raise TypeError(f"Price values must be numeric, got {type(price).__name__}")
+            if price < 0:
+                raise CandleValidationError(f"Candle values must be non-negative, got {price}")
+        if not (self.low <= self.open <= self.high and self.low <= self.close <= self.high):
+            raise CandleValidationError("Open and close prices must be within the high and low prices.")
 
 @dataclass(frozen=True)
 class RSI(TimeseriesObject):
