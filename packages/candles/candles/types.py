@@ -71,10 +71,10 @@ class TimeseriesObject:
             raise TimeseriesValidationError(
                 f"Timestamp {self.timestamp} is before the base initial timestamp {BASE_INITIAL_TIMESTAMP}"
             )
-        if self.timestamp % self.timeframe.ms != 0:
-            raise TimeseriesValidationError(
-                f"Timestamp {self.timestamp} is not aligned with the timeframe {self.timeframe}"
-            )
+        # if self.timestamp % self.timeframe.ms != 0:
+        #     raise TimeseriesValidationError(
+        #         f"Timestamp {self.timestamp} is not aligned with the timeframe {self.timeframe}"
+        #     )
 
     def __repr__(self):
         return json.dumps(self.__dict__)
