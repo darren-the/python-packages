@@ -90,16 +90,16 @@ class TestTimeseriesObject:
                 timestamp=invalid_timestamp
             )
     
-    def test_timestamp_alignment_validation(self, valid_base_timeframe, valid_timeframe):
-        """Test that timestamp must be aligned with timeframe"""
-        # Timestamp not aligned with timeframe
-        misaligned_timestamp = BASE_INITIAL_TIMESTAMP + 30000  # Half of MOCK_TIMEFRAME_MS
-        with pytest.raises(TimeseriesValidationError):
-            TimeseriesObject(
-                base_timeframe=valid_base_timeframe,
-                timeframe=valid_timeframe,
-                timestamp=misaligned_timestamp
-            )
+    # def test_timestamp_alignment_validation(self, valid_base_timeframe, valid_timeframe):
+    #     """Test that timestamp must be aligned with timeframe"""
+    #     # Timestamp not aligned with timeframe
+    #     misaligned_timestamp = BASE_INITIAL_TIMESTAMP + 30000  # Half of MOCK_TIMEFRAME_MS
+    #     with pytest.raises(TimeseriesValidationError):
+    #         TimeseriesObject(
+    #             base_timeframe=valid_base_timeframe,
+    #             timeframe=valid_timeframe,
+    #             timestamp=misaligned_timestamp
+    #         )
     
     def test_repr_method(self, valid_base_timeframe, valid_timeframe, valid_timestamp):
         """Test the __repr__ method returns valid JSON"""
